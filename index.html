@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 0;
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .highlighted {
+            border: 3px solid red;
+            transform: scale(1.05);
+        }
+
+        .full-view {
+            display: none;
+        }
+
+        .back-button {
+            margin: 20px;
+        }
+
+        /* Specific style for the second page */
+        #image-grid {
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        }
+    </style>
+</head>
+<body>
+
+<div id="main-page">
+    <h1>Image Gallery</h1>
+    <p>Instructions: left-click - open profile, q - select profile, s - save selection, l - load selection</p>
+    <div class="grid" id="thumbnail-grid"></div>
+</div>
+
+<div class="full-view" id="full-view">
+    <h1>Images in Directory</h1>
+    <p>Instructions: press backspace to return</p>
+    <div class="grid" id="image-grid"></div>
+    <button class="back-button" onclick="showMainPage()">Back to Main Page</button>
+</div>
+
+<script>
+    const images = [
+    '10/1.png','10/2.png','10/3.png','10/4.png','10/5.png','10/6.png','10/7.png','11/1.png','11/2.png','11/3.png','11/4.png','11/5.png','1/1.png','12/1.png','12/2.png','12/3.png','12/4.png','12/5.png','12/6.png','12/7.png','12/8.png','1/2.png','13/1.png','13/2.png','13/3.png','13/4.png','13/5.png','13/6.png','13/7.png','13/8.png','13/9.png','1/3.png','2/1.png','2/2.png','2/3.png','2/4.png','2/5.png','2/6.png','3/1.png','3/2.png','3/3.png','3/4.png','3/5.png','4/1.png','4/2.png','4/3.png','4/4.png','4/5.png','4/6.png','5/1.png','5/2.png','5/3.png','5/4.png','5/5.png','5/6.png','5/7.png','5/8.png','5/9.png','6/1.png','6/2.png','6/3.png','6/4.png','6/5.png','7/1.png','7/2.png','7/3.png','8/1.png','8/2.png','8/3.png','8/4.png','8/5.png','9/1.png','9/2.png','9/3.png','9/4.png'
+
+    ];
+
+    const thumbnailGrid = document.getElementById('thumbnail-grid');
+    const imageGrid = document.getElementById('image-grid');
+    
+    // Variable to store scroll position
+    let lastScrollPosition = 0;
+
+    // Show only '1.png' from each directory on the main page
+    const directories = Array.from(new Set(images.map(src => src.split('/')[0])));
+    const mainThumbnails = directories.map(dir => `${dir}/1.png`);
+
+    mainThumbnails.forEach((src, index) => {
+        const img = document.createElement('img');
+        img.src = src;
+        img.className = 'thumbnail';
+        img.alt = `Thumbnail ${index + 1}`;
+        img.dataset.directory = src.split('/')[0]; // Store the directory for opening full view
+
+        // Open full view on click
+        img.onclick = () => showFullView(img.dataset.directory);
+
+        thumbnailGrid.appendChild(img);
+    });
+
+    // Show all images in full view when a thumbnail is clicked
+    function showFullView(directory) {
+        // Save current scroll position before switching
+        lastScrollPosition = window.scrollY || window.pageYOffset;
+        
+        document.getElementById('main-page').style.display = 'none';
+        document.getElementById('full-view').style.display = 'block';
+        window.scrollTo(0, 0); // Scroll to top
+
+        // Filter images from the clicked directory
+        const directoryImages = images.filter(src => src.startsWith(`${directory}/`));
+
+        // Clear and add images to full view
+        imageGrid.innerHTML = '';
+        directoryImages.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'thumbnail';
+            img.alt = src;
+            imageGrid.appendChild(img);
+        });
+    }
+
+    // Function to return back to the main page
+    function showMainPage() {
+        document.getElementById('main-page').style.display = 'block';
+        document.getElementById('full-view').style.display = 'none';
+        
+        // Restore previous scroll position
+        window.scrollTo(0, lastScrollPosition);
+    }
+
+    const highlightedThumbnails = new Set();
+
+    // Handle keyboard events
+    document.addEventListener('keydown', (event) => {
+        // Handle backspace to return to main page from full view
+        if (event.key === 'Backspace' && document.getElementById('full-view').style.display === 'block') {
+            showMainPage();
+            return;
+        }
+
+        // Existing main page keyboard controls
+        if (document.getElementById('main-page').style.display !== 'none') {
+            const mouseOverImg = document.querySelector('.thumbnail:hover');
+            if (event.key === 'q' && mouseOverImg) {
+                mouseOverImg.classList.toggle('highlighted');
+                const directory = mouseOverImg.dataset.directory;
+                if (highlightedThumbnails.has(directory)) {
+                    highlightedThumbnails.delete(directory);
+                } else {
+                    highlightedThumbnails.add(directory);
+                }
+            } else if (event.key === 's') {
+                const selectionString = Array.from(highlightedThumbnails).join(',');
+                navigator.clipboard.writeText(selectionString); // Copy to clipboard
+                alert(`Selection copied: ${selectionString}`);
+            } else if (event.key === 'l') {
+                const selection = prompt("Enter directory numbers (e.g., 3,5,6):");
+                if (selection) {
+                    highlightedThumbnails.clear(); // Clear existing selection
+                    // Clear existing highlights
+                    document.querySelectorAll('.thumbnail.highlighted').forEach(img => img.classList.remove('highlighted'));
+                    
+                    const dirs = selection.split(',').map(Number);
+                    dirs.forEach(dir => {
+                        const thumbnail = thumbnailGrid.querySelector(`img[src="${dir}/1.png"]`);
+                        if (thumbnail) {
+                            thumbnail.classList.add('highlighted');
+                            highlightedThumbnails.add(thumbnail.dataset.directory);
+                        }
+                    });
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
